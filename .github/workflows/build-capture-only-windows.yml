@@ -6,7 +6,7 @@ on:
 jobs:
   build-win_x64:
     name: Build chiaki-ng win_x64 (VC)
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       CC: clang-cl.exe
       CXX: clang-cl.exe
@@ -69,8 +69,9 @@ jobs:
           ${{ env.pythonLocation }}\python.exe -m pip install --upgrade pip
           ${{ env.pythonLocation }}\python.exe -m pip install --upgrade setuptools wheel
           ${{ env.pythonLocation }}\python.exe -m pip install --user --upgrade scons protobuf grpcio-tools pyinstaller
-          ${{ env.pythonLocation }}\python.exe -m pip install --user --upgrade meson
+          ${{ env.pythonLocation }}\python.exe -m pip install --user "meson==1.7.2"
           ${{ env.pythonLocation }}\python.exe -c 'import google.protobuf; print(google.protobuf.__file__)'
+          meson --version
 
       - name: Setup ffmpeg
         run: |
@@ -157,10 +158,18 @@ jobs:
 
       - name: Build libplacebo
         run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Host "Compiler diagnostics:"
+          where.exe clang-cl
+          clang-cl --version
+          where.exe link
+          Write-Host "VSINSTALLDIR=$env:VSINSTALLDIR"
+          Write-Host "VCToolsInstallDir=$env:VCToolsInstallDir"
           git clone --recursive https://github.com/haasn/libplacebo.git
           cd libplacebo
           git checkout --recurse-submodules ${{ env.libplacebo_tag }}
           meson setup `
+          --vsenv `
           --prefix "${{ github.workspace }}\${{ env.dep_folder }}" `
           --native-file ../meson.ini `
           "--pkg-config-path=['${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\lib\pkgconfig','${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\share\pkgconfig','${{ github.workspace }}\${{ env.dep_folder }}\lib\pkgconfig']" `
@@ -171,8 +180,17 @@ jobs:
           -Dcpp_link_args="/LIBPATH:${{ env.VULKAN_SDK }}Lib" `
           -Ddemos=false `
           ./build
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "===== meson-log.txt ====="
+            if (Test-Path ".\build\meson-logs\meson-log.txt") {
+              Get-Content ".\build\meson-logs\meson-log.txt"
+            }
+            throw "libplacebo Meson configure failed"
+          }
           ninja -C./build
+          if ($LASTEXITCODE -ne 0) { throw "libplacebo build failed" }
           ninja -C./build install
+          if ($LASTEXITCODE -ne 0) { throw "libplacebo install failed" }
 
       - name: Apply Patches
         run: |
@@ -212,7 +230,7 @@ jobs:
           cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\fftw3.dll" chiaki-ng-Win
           cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\opus.dll" chiaki-ng-Win
           cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\libspeexdsp.dll" chiaki-ng-Win
-          cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\lcms2.dll" chiaki-ng-Win
+          cp "${env:VCPKG_INST_DIR}\${{ env.triplet }}\bin\lcms2.dll" chiaki-ng-Win
           cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\miniupnpc.dll" chiaki-ng-Win
           cp "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin\json-c.dll" chiaki-ng-Win
           cp "${{ github.workspace }}\${{ env.dep_folder }}\bin\swresample-*.dll" chiaki-ng-Win
