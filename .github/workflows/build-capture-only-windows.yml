@@ -223,8 +223,12 @@ jobs:
           Copy-Item build\third-party\cpp-steam-tools\cpp-steam-tools.dll chiaki-ng-Win -Force
           Copy-Item scripts\qtwebengine_import.qml gui\src\qml\ -Force
 
-          # CMake/vcpkg already places the runtime DLLs actually required by chiaki.exe in build\gui.
+          # CMake/vcpkg already places the direct runtime DLLs required by chiaki.exe in build\gui.
           Get-ChildItem build\gui -Filter "*.dll" -File | Copy-Item -Destination chiaki-ng-Win -Force
+
+          # Include all vcpkg release runtime DLLs as well. This catches indirect dependencies
+          # such as Little CMS (lcms2-2.dll) required by libplacebo at runtime.
+          Get-ChildItem "${env:VCPKG_INSTALLED_DIR}\${{ env.triplet }}\bin" -Filter "*.dll" -File | Copy-Item -Destination chiaki-ng-Win -Force
 
           # Copy external runtime dependencies built/downloaded by this workflow (FFmpeg, SDL compat,
           # libplacebo, shaderc, SPIRV-Cross, etc.) without relying on brittle individual filenames.
