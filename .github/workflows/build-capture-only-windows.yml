@@ -16,6 +16,7 @@ jobs:
       dep_folder: deps
       libplacebo_tag: v7.360.1
       sdl2_compat_tag: 2.32.64
+      shaderc_commit: 27d8e0b55b53b97c1f25a90014b403993a114392
 
     defaults:
       run:
@@ -99,21 +100,31 @@ jobs:
           cmake --build build --config Release
           cmake --install build
 
-      - name: Setup shaderc
+      - name: Build shaderc from source
         run: |
           $ErrorActionPreference = 'Stop'
-          $badgeUrl = "https://storage.googleapis.com/shaderc/badges/build_link_windows_vs2022_amd64_release.html"
-          $badge = curl.exe -L --fail --retry 3 --silent --show-error $badgeUrl
-          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($badge)) { throw "Unable to read Shaderc Windows build badge" }
-          $match = [regex]::Match(($badge -join "`n"), 'url=([^"''>]+)')
-          if (-not $match.Success) { throw "Unable to find Shaderc download URL in build badge" }
-          $url = [System.Net.WebUtility]::HtmlDecode($match.Groups[1].Value)
-          Write-Host "Shaderc package: $url"
-          curl.exe -L --fail --retry 3 --retry-delay 2 --show-error $url -o shaderc.zip
-          if ($LASTEXITCODE -ne 0 -or -not (Test-Path .\shaderc.zip)) { throw "Unable to download Shaderc package" }
-          Expand-Archive -LiteralPath "shaderc.zip" -DestinationPath "."
-          cp "./install/*" "./${{ env.dep_folder }}" -Force -Recurse
-          rm "./install" -r -force
+          git clone https://github.com/google/shaderc.git shaderc-src
+          cd shaderc-src
+          git checkout ${{ env.shaderc_commit }}
+          & "${{ env.pythonLocation }}\python.exe" .\utils\git-sync-deps
+          if ($LASTEXITCODE -ne 0) { throw "Shaderc dependency sync failed" }
+          cd ..
+          cmake `
+            -S shaderc-src `
+            -B shaderc-build `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}\${{ env.dep_folder }}" `
+            -DSHADERC_SKIP_TESTS=ON `
+            -DSHADERC_SKIP_EXAMPLES=ON `
+            -DSHADERC_ENABLE_SHARED_CRT=ON
+          cmake --build shaderc-build --config Release
+          if ($LASTEXITCODE -ne 0) { throw "Shaderc build failed" }
+          cmake --install shaderc-build --config Release
+          if ($LASTEXITCODE -ne 0) { throw "Shaderc install failed" }
+          if (-not (Test-Path "${{ github.workspace }}\${{ env.dep_folder }}\bin\shaderc_shared.dll")) {
+            throw "shaderc_shared.dll was not installed where expected"
+          }
 
       - name: Make build directory
         run: |
