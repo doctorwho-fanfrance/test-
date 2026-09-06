@@ -206,7 +206,6 @@ jobs:
           -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE `
           -DCMAKE_BUILD_TYPE=Release `
           -DCHIAKI_ENABLE_CLI=OFF `
-          -DCHIAKI_GUI_ENABLE_SDL_GAMECONTROLLER=OFF `
           -DCHIAKI_ENABLE_SETSU=OFF `
           -DCHIAKI_ENABLE_STEAMDECK_NATIVE=OFF `
           -DPYTHON_EXECUTABLE="${{ env.pythonLocation }}\python.exe" `
