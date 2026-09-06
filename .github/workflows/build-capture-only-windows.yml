@@ -131,11 +131,29 @@ jobs:
           mkdir build
 
       - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: ${{ env.vcpkg_baseline }}
-          runVcpkgInstall: true
-          vcpkgJsonGlob: "vcpkg.json"
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (Test-Path .\vcpkg) {
+            Remove-Item .\vcpkg -Recurse -Force
+          }
+          Write-Host "Cloning vcpkg..."
+          git clone https://github.com/microsoft/vcpkg.git vcpkg
+          if ($LASTEXITCODE -ne 0) { throw "Unable to clone vcpkg" }
+          cd vcpkg
+          git checkout ${{ env.vcpkg_baseline }}
+          if ($LASTEXITCODE -ne 0) { throw "Unable to checkout pinned vcpkg baseline" }
+          .\bootstrap-vcpkg.bat -disableMetrics
+          if ($LASTEXITCODE -ne 0) { throw "vcpkg bootstrap failed" }
+          cd ..
+          Write-Host "Installing chiaki-ng dependencies from vcpkg.json..."
+          .\vcpkg\vcpkg.exe install `
+            --triplet ${{ env.triplet }} `
+            --x-manifest-root="${{ github.workspace }}" `
+            --x-install-root="${{ env.VCPKG_INSTALLED_DIR }}" `
+            --disable-metrics
+          if ($LASTEXITCODE -ne 0) { throw "vcpkg install failed with exit code $LASTEXITCODE" }
+          Write-Host "vcpkg dependencies installed successfully."
+          Get-ChildItem "${{ env.VCPKG_INSTALLED_DIR }}\${{ env.triplet }}" | Select-Object Name
 
       - name: Build libplacebo
         run: |
