@@ -1,0 +1,12 @@
+﻿PS5 Capture Only prototype
+Generated: 2026-09-06T12:44:12.2617030+02:00
+
+Compile flags:
+- CHIAKI_GUI_ENABLE_SDL_GAMECONTROLLER=OFF
+- CHIAKI_ENABLE_SETSU=OFF
+- CHIAKI_ENABLE_STEAMDECK_NATIVE=OFF
+
+Runtime source patch:
+- keyboard controller forced OFF
+- mouse/touchpad forced OFF
+- virtual D-pad touch forced OFF

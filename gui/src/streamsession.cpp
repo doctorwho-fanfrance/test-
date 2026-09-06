@@ -300,9 +300,10 @@ StreamSessionConnectInfo::StreamSessionConnectInfo(
 	this->fullscreen = fullscreen;
 	this->zoom = zoom;
 	this->stretch = stretch;
-	const bool keyboard_controller_enabled_setting = settings->GetKeyboardEnabled();
-	this->keyboard_controller_enabled = keyboard_controller_enabled_setting;
-	this->mouse_touch_enabled = settings->GetMouseTouchEnabled();
+	// PS5 CAPTURE ONLY: never use the PC keyboard as a controller.
+this->keyboard_controller_enabled = false;
+	// PS5 CAPTURE ONLY: never send mouse/touchpad input.
+this->mouse_touch_enabled = false;
 	this->enable_keyboard = false;
 	this->enable_dualsense = true;
 	this->enable_idr_on_fec_failure = settings->GetIDROnFECFailureEnabled();
@@ -328,7 +329,8 @@ StreamSessionConnectInfo::StreamSessionConnectInfo(
 	this->psn_account_id = settings->GetPsnAccountId();
 	this->duid = std::move(duid);
 	this->auto_regist = auto_regist;
-	this->dpad_touch_increment = settings->GetDpadTouchEnabled() ? settings->GetDpadTouchIncrement(): 0;
+	// PS5 CAPTURE ONLY: disable virtual D-pad touch shortcuts.
+this->dpad_touch_increment = 0;
 	this->dpad_touch_shortcut1 = settings->GetDpadTouchShortcut1();
 	if(this->dpad_touch_shortcut1 > 0)
 		this->dpad_touch_shortcut1 = 1 << (this->dpad_touch_shortcut1 - 1);
